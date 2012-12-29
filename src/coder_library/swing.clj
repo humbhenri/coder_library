@@ -2,12 +2,11 @@
   (:gen-class)
   (:import [javax.swing Box BoxLayout JTextField JPanel JSplitPane JLabel JButton
             JOptionPane DefaultListModel JList ListSelectionModel JScrollPane
-            SwingUtilities]
+            SwingUtilities JMenu JMenuItem]
            [javax.swing.event ListSelectionListener]
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener]
-           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]
-           [org.fife.ui.rtextarea RTextScrollPane]))
+           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]))
 
 ;;; Joy of Clojure
 (defn shelf [& components]
@@ -55,26 +54,26 @@
         (.add g (f))))
     g))
 
-(defn jlist [items selection-cb]
-  (let [model (DefaultListModel.)
-        jlist (JList. model)]
-    (doto jlist
-      (.setSelectionMode ListSelectionModel/SINGLE_INTERVAL_SELECTION)                (.setLayoutOrientation JList/VERTICAL)
-      (.setVisibleRowCount -1))
-    (.addListSelectionListener (.getSelectionModel jlist) (proxy [ListSelectionListener] []
-                                    (valueChanged [e]
-                                      (SwingUtilities/invokeLater (selection-cb e))
-                                      (.revalidate jlist))))
 
-    (doseq [item items]
-      (.addElement model item))
-    {:widget (JScrollPane. jlist)
-     :model model
-     :jlist jlist}))
+(defn jlist [model selection-cb]
+  (let [jlist (JList. model)]
+    (doto jlist
+      (.setSelectionMode ListSelectionModel/SINGLE_SELECTION)
+      (.setLayoutOrientation JList/VERTICAL)
+      (.setVisibleRowCount -1))
+    (.addListSelectionListener jlist (proxy [ListSelectionListener] []
+                                    (valueChanged [e]
+                                      (selection-cb e))))
+    (JScrollPane. jlist)))
 
 
 (defn syntax-area [rows cols]
-  (RTextScrollPane.
-   (doto (RSyntaxTextArea. rows cols)
-     (.setAntiAliasingEnabled true)
-     (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVA))))
+  (doto (RSyntaxTextArea. rows cols)
+    (.setAntiAliasingEnabled true)
+    (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVA)))
+
+(defn menu-item [label action]
+  (doto (JMenuItem. label)
+    (.addActionListener (proxy [ActionListener] []
+                          (actionPerformed [e]
+                            (action e))))))
