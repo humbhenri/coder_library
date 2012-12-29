@@ -1,7 +1,9 @@
 (ns coder-library.swing
   (:gen-class)
   (:import [javax.swing Box BoxLayout JTextField JPanel JSplitPane JLabel JButton
-            JOptionPane DefaultListModel JList ListSelectionModel JScrollPane]
+            JOptionPane DefaultListModel JList ListSelectionModel JScrollPane
+            SwingUtilities]
+           [javax.swing.event ListSelectionListener]
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener]
            [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]
@@ -23,7 +25,7 @@
 
 (defn splitter [top bottom]
   (doto (JSplitPane.)
-    (.setOrientation JSplitPane/VERTICAL_SPLIT)
+    (.setOrientation JSplitPane/HORIZONTAL_SPLIT)
     (.setLeftComponent top)
     (.setRightComponent bottom)))
 
@@ -53,15 +55,22 @@
         (.add g (f))))
     g))
 
-(defn jlist [items]
-  (let [model (DefaultListModel.)]
+(defn jlist [items selection-cb]
+  (let [model (DefaultListModel.)
+        jlist (JList. model)]
+    (doto jlist
+      (.setSelectionMode ListSelectionModel/SINGLE_INTERVAL_SELECTION)                (.setLayoutOrientation JList/VERTICAL)
+      (.setVisibleRowCount -1))
+    (.addListSelectionListener (.getSelectionModel jlist) (proxy [ListSelectionListener] []
+                                    (valueChanged [e]
+                                      (SwingUtilities/invokeLater (selection-cb e))
+                                      (.revalidate jlist))))
+
     (doseq [item items]
       (.addElement model item))
-    (JScrollPane.
-     (doto (JList. model)
-       (.setSelectionMode ListSelectionModel/SINGLE_INTERVAL_SELECTION)
-       (.setLayoutOrientation JList/VERTICAL)
-       (.setVisibleRowCount -1)))))
+    {:widget (JScrollPane. jlist)
+     :model model
+     :jlist jlist}))
 
 
 (defn syntax-area [rows cols]
