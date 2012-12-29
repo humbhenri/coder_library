@@ -3,7 +3,9 @@
   (:import [javax.swing Box BoxLayout JTextField JPanel JSplitPane JLabel JButton
             JOptionPane DefaultListModel JList ListSelectionModel JScrollPane]
            [java.awt BorderLayout Component GridLayout FlowLayout]
-           [java.awt.event ActionListener]))
+           [java.awt.event ActionListener]
+           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]
+           [org.fife.ui.rtextarea RTextScrollPane]))
 
 ;;; Joy of Clojure
 (defn shelf [& components]
@@ -60,3 +62,10 @@
        (.setSelectionMode ListSelectionModel/SINGLE_INTERVAL_SELECTION)
        (.setLayoutOrientation JList/VERTICAL)
        (.setVisibleRowCount -1)))))
+
+
+(defn syntax-area [rows cols]
+  (RTextScrollPane.
+   (doto (RSyntaxTextArea. rows cols)
+     (.setAntiAliasingEnabled true)
+     (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVA))))
