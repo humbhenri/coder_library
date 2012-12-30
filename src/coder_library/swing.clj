@@ -2,7 +2,7 @@
   (:gen-class)
   (:import [javax.swing Box BoxLayout JTextField JPanel JSplitPane JLabel JButton
             JOptionPane DefaultListModel JList ListSelectionModel JScrollPane
-            SwingUtilities JMenu JMenuItem ImageIcon]
+            SwingUtilities JMenu JMenuItem ImageIcon JComboBox]
            [javax.swing.event ListSelectionListener]
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener]
@@ -79,6 +79,12 @@
     (.setAntiAliasingEnabled true)
     (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVA)))
 
+(defn get-supported-languages []
+  (for [field (.getDeclaredFields SyntaxConstants)]
+    (.getName field)))
+
+(defmacro set-syntax [syntax-area syntax-constant]
+  `(.setSyntaxEditingStyle ~syntax-area 'syntax-constant))
 
 (defn menu-item [label action]
   (doto (JMenuItem. label)
@@ -89,3 +95,9 @@
 
 (defn icon [path alt-text]
   (ImageIcon. (resource path) alt-text))
+
+
+(defn combo [items selection-cb]
+  (doto (JComboBox. (.toArray items))
+    (.addActionListener (proxy [ActionListener] []
+                          (actionPerformed [_] (selection-cb))))))

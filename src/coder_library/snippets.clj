@@ -10,4 +10,4 @@
 
 ;;; TODO
 (defn load-snippets []
-  (take 10 (repeat (new-snippet "language" "body" "header"))))
+  [])

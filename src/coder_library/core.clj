@@ -1,7 +1,6 @@
 (ns coder-library.core
   (:gen-class)
-  (:use [coder-library.swing :only [label button txt shelf stack splitter
-                                    grid alert jlist syntax-area menu-item icon migpanel]]
+  (:use [coder-library.swing :as ui]
         [coder-library.snippets :only [load-snippets new-snippet]])
   (:import [javax.swing Box BoxLayout JTextField JPanel
             JSplitPane JLabel JButton
@@ -15,7 +14,12 @@
 (def application {:snippets (atom [])
                   :code-area-content (atom "")
                   :editable (atom false)
-                  :message (atom "")})
+                  :message (atom "")
+                  :syntax (atom 0)})
+
+
+(defn display-msg [msg]
+  (reset! (:message application) msg))
 
 
 (defn update-snippet-body [listSelectionEvent]
@@ -29,25 +33,35 @@
       (reset! editable false))))
 
 
+(defn insert-snippet [lang body header]
+  (let [snippets (:snippets application)]
+    (swap! snippets conj {:language lang :body body :header header})
+    (display-msg "Snippet inserted.")))
+
+
 (defn make-new-snippet-dialog [frame]
   (let [dialog (JDialog. frame "Insert New Snippet" true)
-        save-btn (button "Save" #(alert "Saved"))
-        cancel-btn (button "Cancel" #(alert "Cancel"))
-        code-area (syntax-area 60 20)]
+        code-area (ui/syntax-area 60 20)
+        lang (combo (ui/get-supported-languages) #())
+        header (ui/txt 40 "")
+        hide #(do (.setText code-area "")
+                  (.setText header "")
+                  (.hide dialog))
+        save-btn (ui/button "Save" #(do
+                                   (insert-snippet (.getSelectedItem lang) (.getText code-area) (.getText header))
+                                   (hide)))
+        cancel-btn (ui/button "Cancel" hide)]
     (doto dialog
       (.setVisible false)
-      (.setContentPane
-       (stack (shelf (label "Language:") (label "..."))
-              (label "Snippet")
-              (RTextScrollPane. code-area)
-              (shelf save-btn cancel-btn)))
+      (.setContentPane (doto (ui/migpanel "fillx")
+                         (.add (ui/label "Language") "alignx right")
+                         (.add lang "alignx left, wrap")
+                         (.add (ui/label "Header") "alignx right")
+                         (.add header "alignx left, wrap")
+                         (.add (RTextScrollPane. code-area) "span, grow, wrap")
+                         (.add save-btn "alignx right")
+                         (.add cancel-btn)))
       (.setSize 320 240))))
-
-
-(defn insert-new-snippet []
-  (do
-    (reset! (:editable application) true)
-    (reset! (:code-area-content application) "")))
 
 
 (defn edit-snippet []
@@ -66,15 +80,15 @@
 (defn make-window []
   (let [frame (JFrame. "Coder Libray")
         snippets-list-model (DefaultListModel.)
-        snippets-list (jlist snippets-list-model update-snippet-body)
-        code-area (syntax-area 60 20)
+        snippets-list (ui/jlist snippets-list-model update-snippet-body)
+        code-area (ui/syntax-area 60 20)
         new-snippet-dialog (make-new-snippet-dialog frame)
         menubar (JMenuBar.)
         toolbar (JToolBar.)
-        save-btn (button "Save" (fn [] (save-snippet (.getText code-area))))
-        save-menu (menu-item "Save" (fn [e] (save-snippet (.getText code-area))))
-        content-pane (migpanel "fillx")
-        status (label "")]
+        save-btn (ui/button "Save" (fn [] (save-snippet (.getText code-area))))
+        save-menu (ui/menu-item "Save" (fn [e] (save-snippet (.getText code-area))))
+        content-pane (ui/migpanel "fillx")
+        status (ui/label "")]
     (add-watch (:snippets application) nil
                (fn [_ _ _ newsnippets]
                  (SwingUtilities/invokeLater
@@ -104,27 +118,21 @@
     (.setEnabled save-menu false)
     (.add menubar
           (doto (JMenu. "File")
-            (.add (menu-item "New" (fn [e] (insert-new-snippet))))
+            (.add (ui/menu-item "New" (fn [e] (.setVisible new-snippet-dialog true))))
             (.add save-menu)))
     (.setFloatable toolbar false)
     (.add toolbar
-          (doto (button "New" (fn [] (do
-                                       (insert-new-snippet))))
+          (doto (ui/button "New" (fn [] (.setVisible new-snippet-dialog true)))
             (.setIcon (icon "new.gif" "New"))))
     (.add toolbar
           (doto save-btn (.setIcon (icon "save.gif" "Save"))
                 (.setEnabled false)))
     (doto content-pane
       (.add toolbar "span, grow")
-      (.add (splitter snippets-list (stack (RTextScrollPane. code-area))) "span, grow")
+      (.add (ui/splitter snippets-list (ui/stack (RTextScrollPane. code-area))) "span, grow")
       (.add status "span, grow"))
     (doto frame
       (.setJMenuBar menubar)
-      ;; (.setContentPane (stack
-      ;;                   toolbar
-      ;;                   (splitter snippets-list
-      ;;                             (stack
-      ;;                              (RTextScrollPane. code-area)))))
       (.setContentPane content-pane)
       (.setSize 640 480)
       (.setVisible true))))
