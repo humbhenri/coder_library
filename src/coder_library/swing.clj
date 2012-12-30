@@ -2,11 +2,12 @@
   (:gen-class)
   (:import [javax.swing Box BoxLayout JTextField JPanel JSplitPane JLabel JButton
             JOptionPane DefaultListModel JList ListSelectionModel JScrollPane
-            SwingUtilities JMenu JMenuItem]
+            SwingUtilities JMenu JMenuItem ImageIcon]
            [javax.swing.event ListSelectionListener]
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener]
-           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]))
+           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants])
+  (:use [clojure.java.io :only [resource]]))
 
 ;;; Joy of Clojure
 (defn shelf [& components]
@@ -72,8 +73,13 @@
     (.setAntiAliasingEnabled true)
     (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVA)))
 
+
 (defn menu-item [label action]
   (doto (JMenuItem. label)
     (.addActionListener (proxy [ActionListener] []
                           (actionPerformed [e]
                             (action e))))))
+
+
+(defn icon [path alt-text]
+  (ImageIcon. (resource path) alt-text))

@@ -5,4 +5,5 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [com.fifesoft/rsyntaxtextarea "2.0.2"]]
-  :main coder_library.core)
+  :main coder_library.core
+  :resource-paths ["resources"])
