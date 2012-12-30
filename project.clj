@@ -4,6 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [com.fifesoft/rsyntaxtextarea "2.0.2"]]
+                 [com.fifesoft/rsyntaxtextarea "2.0.2"]
+                 [org.clojars.nakkaya/miglayout "3.7.3.1"]]
   :main coder_library.core
   :resource-paths ["resources"])

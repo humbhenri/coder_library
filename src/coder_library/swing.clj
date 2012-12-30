@@ -6,7 +6,8 @@
            [javax.swing.event ListSelectionListener]
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener]
-           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants])
+           [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]
+           [net.miginfocom.swing MigLayout])
   (:use [clojure.java.io :only [resource]]))
 
 ;;; Joy of Clojure
@@ -54,6 +55,11 @@
       (dotimes [j y]
         (.add g (f))))
     g))
+
+
+(defn migpanel [& constraints]
+  (let [[layout col row] constraints]
+    (JPanel. (MigLayout. layout col row))))
 
 
 (defn jlist [model selection-cb]
