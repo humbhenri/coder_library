@@ -53,14 +53,10 @@
         cancel-btn (ui/button "Cancel" hide)]
     (doto dialog
       (.setVisible false)
-      (.setContentPane (doto (ui/migpanel "fillx")
-                         (.add (ui/label "Language") "alignx right")
-                         (.add lang "alignx left, wrap")
-                         (.add (ui/label "Header") "alignx right")
-                         (.add header "alignx left, wrap")
-                         (.add (RTextScrollPane. code-area) "span, grow, wrap")
-                         (.add save-btn "alignx right")
-                         (.add cancel-btn)))
+      (.setContentPane (stack (shelf (ui/label "Syntax") lang)
+                              (shelf (ui/label "Header") header)
+                              (RTextScrollPane. code-area)
+                              (shelf save-btn cancel-btn)))
       (.setSize 320 240))))
 
 
