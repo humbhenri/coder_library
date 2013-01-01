@@ -83,8 +83,9 @@
   (for [field (.getDeclaredFields SyntaxConstants)]
     (.getName field)))
 
-(defmacro set-syntax [syntax-area syntax-constant]
-  `(.setSyntaxEditingStyle ~syntax-area 'syntax-constant))
+(defn set-syntax [^RSyntaxTextArea syntax-area syntax]
+  (let [get-constant #(-> (.replaceAll % "SYNTAX_STYLE_" "text/") (.toLowerCase))]
+    (.setSyntaxEditingStyle syntax-area (get-constant syntax))))
 
 (defn menu-item [label action]
   (doto (JMenuItem. label)
@@ -100,4 +101,4 @@
 (defn combo [items selection-cb]
   (doto (JComboBox. (.toArray items))
     (.addActionListener (proxy [ActionListener] []
-                          (actionPerformed [_] (selection-cb))))))
+                          (actionPerformed [e] (selection-cb (.getSource e)))))))

@@ -12,25 +12,23 @@
 
 
 (def application {:snippets (atom [])
-                  :code-area-content (atom "")
+                  :selected (atom 0)
                   :editable (atom false)
-                  :message (atom "")
-                  :syntax (atom 0)})
+                  :message (atom "")})
 
 
 (defn display-msg [msg]
   (reset! (:message application) msg))
 
 
-(defn update-snippet-body [listSelectionEvent]
+(defn select-snippet [listSelectionEvent]
   (let [model (.getSource listSelectionEvent)
         item (.getSelectedIndex model)
         snippets (:snippets application)
         editable (:editable application)]
     (when-not (.getValueIsAdjusting listSelectionEvent)
-      (reset! (:code-area-content application)
-              (:body (nth @snippets item)))
-      (reset! editable false))))
+      (reset! (:selected application) item)
+      (reset! editable true))))
 
 
 (defn insert-snippet [lang body header]
@@ -42,7 +40,7 @@
 (defn make-new-snippet-dialog [frame]
   (let [dialog (JDialog. frame "Insert New Snippet" true)
         code-area (ui/syntax-area 60 20)
-        lang (combo (ui/get-supported-languages) #())
+        lang (ui/combo (ui/get-supported-languages) (fn [jcombobox] (ui/set-syntax code-area (.getSelectedItem jcombobox))))
         header (ui/txt 40 "")
         hide #(do (.setText code-area "")
                   (.setText header "")
@@ -57,7 +55,7 @@
                               (shelf (ui/label "Header") header)
                               (RTextScrollPane. code-area)
                               (shelf save-btn cancel-btn)))
-      (.setSize 320 240))))
+      (.setSize 640 480))))
 
 
 (defn edit-snippet []
@@ -66,17 +64,16 @@
 
 (defn save-snippet [text]
   (let [snippets (:snippets application)
-        edit (:editable application)
-        msg (:message application)]
-    (swap! snippets conj (new-snippet "java" text "test"))
-    (reset! edit false)
+        msg (:message application)
+        selected (:selected application)]
+    (swap! snippets assoc-in [@selected :body] text)
     (reset! msg "Saved.")))
 
 
 (defn make-window []
   (let [frame (JFrame. "Coder Libray")
         snippets-list-model (DefaultListModel.)
-        snippets-list (ui/jlist snippets-list-model update-snippet-body)
+        snippets-list (ui/jlist snippets-list-model select-snippet)
         code-area (ui/syntax-area 60 20)
         new-snippet-dialog (make-new-snippet-dialog frame)
         menubar (JMenuBar.)
@@ -94,11 +91,13 @@
                       (.addElement snippets-list-model (:header snippet)))
                     (.revalidate snippets-list)))))
     (.setEditable code-area false)
-    (add-watch (:code-area-content application) nil
-               (fn [_ _ _ newcontent]
+    (add-watch (:selected application) nil
+               (fn [_ _ _ index]
                  (SwingUtilities/invokeLater
                   (fn []
-                    (.setText code-area newcontent)
+                    (let [snippet (nth @(:snippets application) index)]
+                      (.setText code-area (:body snippet))
+                      (ui/set-syntax code-area (:language snippet)))
                     (.revalidate code-area)))))
     (add-watch (:editable application) nil
                (fn [_ _ _ editable]
@@ -130,7 +129,7 @@
     (doto frame
       (.setJMenuBar menubar)
       (.setContentPane content-pane)
-      (.setSize 640 480)
+      (.setSize 800 600)
       (.setVisible true))))
 
 
