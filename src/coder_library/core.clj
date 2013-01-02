@@ -50,9 +50,10 @@
                                    (hide)))
         cancel-btn (ui/button "Cancel" hide)]
     (doto dialog
+      (. setLocationRelativeTo nil)
       (.setVisible false)
       (.setContentPane (stack (shelf (ui/label "Syntax") lang)
-                              (shelf (ui/label "Header") header)
+                              (shelf (ui/label "Description") header)
                               (RTextScrollPane. code-area)
                               (shelf save-btn cancel-btn)))
       (.setSize 640 480))))
@@ -117,7 +118,9 @@
             (.add save-menu)))
     (.setFloatable toolbar false)
     (.add toolbar
-          (doto (ui/button "New" (fn [] (.setVisible new-snippet-dialog true)))
+          (doto (ui/button "New" (fn [] (doto new-snippet-dialog
+                                          (.setLocationRelativeTo nil)
+                                          (.setVisible true))))
             (.setIcon (icon "new.gif" "New"))))
     (.add toolbar
           (doto save-btn (.setIcon (icon "save.gif" "Save"))
@@ -130,6 +133,7 @@
       (.setJMenuBar menubar)
       (.setContentPane content-pane)
       (.setSize 800 600)
+      (. setLocationRelativeTo nil)
       (.setVisible true))))
 
 
