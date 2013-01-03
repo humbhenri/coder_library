@@ -1,7 +1,7 @@
 (ns coder-library.core
   (:gen-class)
   (:use [coder-library.swing :as ui]
-        [coder-library.snippets :only [load-snippets new-snippet]])
+        [coder-library.snippets :only [load-snippets new-snippet save-snippets]]        [coder-library.prefs :as prefs])
   (:import [javax.swing Box BoxLayout JTextField JPanel
             JSplitPane JLabel JButton
             JOptionPane JFrame SwingUtilities DefaultListModel
@@ -16,6 +16,14 @@
                   :editable (atom false)
                   :message (atom "")})
 
+(def preferences "user/preferences")
+
+(defn set-db-path [path]
+  (prefs/apply-prefs {preferences {:db-path path}}))
+
+(defn get-db-path []
+  (or (prefs/get-pref-values preferences :db-path)
+      (str (System/getProperty "user.home") "/coder.db")))
 
 (defn display-msg [msg]
   (reset! (:message application) msg))
@@ -133,18 +141,23 @@
       (.setJMenuBar menubar)
       (.setContentPane content-pane)
       (.setSize 800 600)
-      (. setLocationRelativeTo nil)
+      (.setLocationRelativeTo nil)
       (.setVisible true))))
 
 
 (defn load-data []
   (let [snippets (:snippets application)]
-    (reset! snippets (load-snippets))))
+    (reset! snippets (load-snippets (get-db-path)))))
 
+(defn shutdown []
+  (save-snippets (get-db-path) @(:snippets application)))
 
 (defn -main
   [& args]
-  (make-window)
+  (-> (Runtime/getRuntime)
+      (.addShutdownHook
+       (Thread. shutdown)))
+  (.setDefaultCloseOperation (make-window) JFrame/EXIT_ON_CLOSE)
   (load-data)
   nil)
 
