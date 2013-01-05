@@ -90,8 +90,8 @@
 (defn menu-item [label action]
   (doto (JMenuItem. label)
     (.addActionListener (proxy [ActionListener] []
-                          (actionPerformed [e]
-                            (action e))))))
+                          (actionPerformed [_]
+                            (action))))))
 
 
 (defn icon [path alt-text]

@@ -10,7 +10,10 @@
      :modification (Date.)}))
 
 (defn load-snippets [db-path]
-  (load-file db-path))
+  (try
+    (load-file db-path)
+    (catch java.io.FileNotFoundException e
+      (vector))))
 
 (defn save-snippets [db-path snippets-list]
   (spit db-path snippets-list))

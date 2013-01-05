@@ -1,13 +1,14 @@
 (ns coder-library.core
   (:gen-class)
   (:use [coder-library.swing :as ui]
-        [coder-library.snippets :only [load-snippets new-snippet save-snippets]]        [coder-library.prefs :as prefs])
+        [coder-library.snippets :only [load-snippets new-snippet save-snippets]]
+        [coder-library.prefs :as prefs])
   (:import [javax.swing Box BoxLayout JTextField JPanel
             JSplitPane JLabel JButton
             JOptionPane JFrame SwingUtilities DefaultListModel
-            JMenuBar JMenuItem JMenu JDialog JToolBar]
+            JMenuBar JMenuItem JMenu JDialog JToolBar JFileChooser]
            [java.awt BorderLayout Component GridLayout FlowLayout]
-           [java.awt.event ActionListener]
+           [java.awt.event ActionListener MouseAdapter]
            [org.fife.ui.rtextarea RTextScrollPane]))
 
 
@@ -16,18 +17,19 @@
                   :editable (atom false)
                   :message (atom "")})
 
-(def preferences "user/preferences")
+(defn display-msg [msg]
+  (reset! (:message application) msg))
+
+;;; Node to store the preferences (Preferences API)
+(def preferences "Coder Library/preferences")
+
 
 (defn set-db-path [path]
   (prefs/apply-prefs {preferences {:db-path path}}))
 
 (defn get-db-path []
   (or (prefs/get-pref-values preferences :db-path)
-      (str (System/getProperty "user.home") "/coder.db")))
-
-(defn display-msg [msg]
-  (reset! (:message application) msg))
-
+      (str (System/getProperty "user.home") (System/getProperty "file.separator") "coder.db")))
 
 (defn select-snippet [listSelectionEvent]
   (let [model (.getSource listSelectionEvent)
@@ -58,13 +60,40 @@
                                    (hide)))
         cancel-btn (ui/button "Cancel" hide)]
     (doto dialog
-      (. setLocationRelativeTo nil)
+      (.setLocationRelativeTo nil)
       (.setVisible false)
       (.setContentPane (stack (shelf (ui/label "Syntax") lang)
                               (shelf (ui/label "Description") header)
                               (RTextScrollPane. code-area)
                               (shelf save-btn cancel-btn)))
       (.setSize 640 480))))
+
+(defn make-new-options-dialog [frame]
+  (let [dialog (JDialog. frame "Options" true)
+        hide #(.hide dialog)
+        db-path-input (ui/txt 30 (get-db-path))
+        file-chooser (doto (JFileChooser. )
+                       (.setFileSelectionMode JFileChooser/DIRECTORIES_ONLY))
+        save-btn (ui/button "Save" #(do
+                                      (set-db-path (str (.getText db-path-input)))
+                                      (display-msg (str "Library path changed: " (get-db-path)))
+                                      (hide)))
+        cancel-btn (ui/button "Cancel" hide)
+        ask-db-path #(when (= (.showOpenDialog file-chooser dialog) JFileChooser/APPROVE_OPTION)
+                       (SwingUtilities/invokeLater (fn [] (.setText db-path-input
+                                                                    (-> (.getSelectedFile file-chooser)
+                                                                        (.getAbsolutePath)
+                                                                        (str (System/getProperty "file.separator") "coder.db"))))))]
+    (.addMouseListener db-path-input (proxy [MouseAdapter] []
+                                       (mouseClicked [mouseEvent]
+                                         (ask-db-path))))
+    (doto dialog
+      (.setLocationRelativeTo nil)
+      (.setVisible false)
+      (.setContentPane (stack (shelf (ui/label "Directory to store the library:") db-path-input)
+                              (shelf save-btn cancel-btn)))
+      (.setSize 640 480)
+      (.pack))))
 
 
 (defn edit-snippet []
@@ -82,7 +111,7 @@
 (defn make-window []
   (let [frame (JFrame. "Coder Libray")
         snippets-list-model (DefaultListModel.)
-        snippets-list (ui/jlist snippets-list-model select-snippet)
+        snippets-list (jlist snippets-list-model select-snippet)
         code-area (ui/syntax-area 60 20)
         new-snippet-dialog (make-new-snippet-dialog frame)
         menubar (JMenuBar.)
@@ -90,7 +119,8 @@
         save-btn (ui/button "Save" (fn [] (save-snippet (.getText code-area))))
         save-menu (ui/menu-item "Save" (fn [e] (save-snippet (.getText code-area))))
         content-pane (ui/migpanel "fillx")
-        status (ui/label "")]
+        status (ui/label "")
+        options-dialog (make-new-options-dialog frame)]
     (add-watch (:snippets application) nil
                (fn [_ _ _ newsnippets]
                  (SwingUtilities/invokeLater
@@ -104,10 +134,12 @@
                (fn [_ _ _ index]
                  (SwingUtilities/invokeLater
                   (fn []
-                    (let [snippet (nth @(:snippets application) index)]
+                    (let [snippet (nth @(:snippets application) index)
+                          window-title (:header snippet)]
                       (.setText code-area (:body snippet))
-                      (ui/set-syntax code-area (:language snippet)))
-                    (.revalidate code-area)))))
+                      (ui/set-syntax code-area (:language snippet))
+                      (.setTitle frame (str "Coder Library - " window-title)))
+                    (.revalidate frame)))))
     (add-watch (:editable application) nil
                (fn [_ _ _ editable]
                  (SwingUtilities/invokeLater
@@ -119,11 +151,13 @@
                (fn [_ _ _ newmsg]
                  (SwingUtilities/invokeLater
                   (fn [] (.setText status newmsg)))))
-    (.setEnabled save-menu false)
     (.add menubar
           (doto (JMenu. "File")
-            (.add (ui/menu-item "New" (fn [e] (.setVisible new-snippet-dialog true))))
+            (.add (ui/menu-item "New" #(.setVisible new-snippet-dialog true)))
             (.add save-menu)))
+    (.add menubar
+          (doto (JMenu. "Tools")
+            (.add (ui/menu-item "Options" #(.setVisible options-dialog true)))))
     (.setFloatable toolbar false)
     (.add toolbar
           (doto (ui/button "New" (fn [] (doto new-snippet-dialog
