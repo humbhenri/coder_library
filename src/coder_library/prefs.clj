@@ -1,47 +1,17 @@
 (ns coder-library.prefs
   (:import [java.util.prefs Preferences]))
 
-;;; reference https://github.com/standyck/clojure.standyck/blob/master/stand/prefs.clj
+;;; reference http://www.vogella.com/articles/JavaPreferences/article.html
 
-(defn get-pref-node
-  "Gets a Preference object for the specified path from the system node"
-  [path]
-  (let [root (Preferences/systemRoot)]
-    (. root node path)))
-
-(defn get-pref-values
-  "Gets a value from a preference node. k should be a keyword."
-  ([path]
-     ;;return a map of all the prefs
-     ;;at this node.
-     (let [node (get-pref-node path)
-           pref-keys (seq (. node keys))]
-       (zipmap (map #(keyword %) pref-keys)
-               (map #(get-pref-values path (keyword %)) pref-keys))))
-  ([path k]
-     ;;return the specific value at k or nil if is doesn't exist.
-     (let [node (get-pref-node path)]
-       (. node get (name k) nil))))
+(defn get-prefs []
+  (.node (Preferences/userRoot) "Coder-Library"))
 
 
-(defn set-pref-node
-  "Assign a map of parameters to the specified preference node"
-  [path pref-map]
-  (let [node (get-pref-node path)
-        nkeys (map #(name %) (keys pref-map))
-        nvals (map #(str %) (vals pref-map))]
-    (map #(. node put %1 %2) nkeys nvals)))
+(defn put-pref [id ^java.lang.String value]
+  (let [prefs (get-prefs)]
+    (.put prefs id value)))
 
 
-(defn apply-prefs
-  "Assign a map of preference values to the specified node or nodes.
-The prefs-map should be of the form {\"node-path\" {:key value :key2 value2} \"node2\" {:key value}})"
-  [prefs-map]
-  (map #(set-pref-node %1 %2) (keys prefs-map) (vals prefs-map)))
-
-
-(defn delete-prefs
-  "Remove the preference value associated with the specified key at the specified node path."
-  [path k]
-  (let [node (get-pref-node path)]
-    (. node remove (name k))))
+(defn get-pref [id default]
+  (let [prefs (get-prefs)]
+    (.get prefs id default)))

@@ -17,19 +17,23 @@
                   :editable (atom false)
                   :message (atom "")})
 
+(def file-sep (System/getProperty "file.separator"))
+
+(def db-file-name "coder.db")
+
+
+(def default-db-path (str (System/getProperty "user.home")
+                         file-sep
+                         db-file-name))
+
 (defn display-msg [msg]
   (reset! (:message application) msg))
 
-;;; Node to store the preferences (Preferences API)
-(def preferences "Coder Library/preferences")
-
-
 (defn set-db-path [path]
-  (prefs/apply-prefs {preferences {:db-path path}}))
+  (prefs/put-pref "DB-PATH" path))
 
 (defn get-db-path []
-  (or (prefs/get-pref-values preferences :db-path)
-      (str (System/getProperty "user.home") (System/getProperty "file.separator") "coder.db")))
+  (prefs/get-pref "DB-PATH" default-db-path))
 
 (defn select-snippet [listSelectionEvent]
   (let [model (.getSource listSelectionEvent)
@@ -73,17 +77,19 @@
         hide #(.hide dialog)
         db-path-input (ui/txt 30 (get-db-path))
         file-chooser (doto (JFileChooser. )
-                       (.setFileSelectionMode JFileChooser/DIRECTORIES_ONLY))
+                       (.setFileSelectionMode JFileChooser/DIRECTORIES_ONLY)
+                       (.setAcceptAllFileFilterUsed false))
         save-btn (ui/button "Save" #(do
                                       (set-db-path (str (.getText db-path-input)))
-                                      (display-msg (str "Library path changed: " (get-db-path)))
+                                      ;; (display-msg (str "Library path changed: " (get-db-path)))
                                       (hide)))
         cancel-btn (ui/button "Cancel" hide)
         ask-db-path #(when (= (.showOpenDialog file-chooser dialog) JFileChooser/APPROVE_OPTION)
                        (SwingUtilities/invokeLater (fn [] (.setText db-path-input
                                                                     (-> (.getSelectedFile file-chooser)
                                                                         (.getAbsolutePath)
-                                                                        (str (System/getProperty "file.separator") "coder.db"))))))]
+                                                                        (str file-sep db-file-name)))
+                                                     (display-msg (.getAbsolutePath (.getSelectedFile file-chooser))))))]
     (.addMouseListener db-path-input (proxy [MouseAdapter] []
                                        (mouseClicked [mouseEvent]
                                          (ask-db-path))))
