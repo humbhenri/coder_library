@@ -81,11 +81,10 @@
 
 (defn get-supported-languages []
   (for [field (.getDeclaredFields SyntaxConstants)]
-    (.getName field)))
+    (.get field nil)))
 
 (defn set-syntax [^RSyntaxTextArea syntax-area syntax]
-  (let [get-constant #(-> (.replaceAll % "SYNTAX_STYLE_" "text/") (.toLowerCase))]
-    (.setSyntaxEditingStyle syntax-area (get-constant syntax))))
+  (.setSyntaxEditingStyle syntax-area syntax))
 
 (defn menu-item [label action]
   (doto (JMenuItem. label)
