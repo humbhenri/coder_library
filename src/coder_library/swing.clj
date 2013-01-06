@@ -17,6 +17,7 @@
     (doseq [c components] (.add shelf c))
     shelf))
 
+
 (defn stack [& components]
   (let [stack (Box. BoxLayout/PAGE_AXIS)]
     (doseq [c components]
@@ -24,11 +25,13 @@
       (.add stack c))
     stack))
 
+
 (defn splitter [top bottom]
   (doto (JSplitPane.)
     (.setOrientation JSplitPane/HORIZONTAL_SPLIT)
     (.setLeftComponent top)
     (.setRightComponent bottom)))
+
 
 (defn button [text f]
   (doto (JButton. text)
@@ -36,17 +39,21 @@
      (proxy [ActionListener] []
        (actionPerformed [_] (f))))))
 
+
 (defn txt [cols t]
   (doto (JTextField.)
     (.setColumns cols)
     (.setText t)))
 
+
 (defn label [txt] (JLabel. txt))
+
 
 (defn alert
   ([msg] (alert nil msg))
   ([frame msg]
      (javax.swing.JOptionPane/showMessageDialog frame msg)))
+
 
 (defn grid [x y f]
   (let [g (doto (JPanel.)
@@ -78,13 +85,16 @@
   (doto (RSyntaxTextArea. rows cols)
     (.setAntiAliasingEnabled true)))
 
+
 (defn get-supported-languages []
   (for [field (.getDeclaredFields SyntaxConstants)]
     (-> (.get field nil)
         (.replaceAll "text/" ""))))
 
+
 (defn set-syntax [^RSyntaxTextArea syntax-area syntax]
   (.setSyntaxEditingStyle syntax-area (str "text/" syntax)))
+
 
 (defn menu-item [label action]
   (doto (JMenuItem. label)

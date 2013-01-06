@@ -17,17 +17,14 @@
                   :editable (atom false)
                   :message (atom "")})
 
+;;; User Preferences
 (def file-sep (System/getProperty "file.separator"))
 
 (def db-file-name "coder.db")
 
-
 (def default-db-path (str (System/getProperty "user.home")
                          file-sep
                          db-file-name))
-
-(defn display-msg [msg]
-  (reset! (:message application) msg))
 
 (defn set-db-path [path]
   (prefs/put-pref "DB-PATH" path))
@@ -35,7 +32,26 @@
 (defn get-db-path []
   (prefs/get-pref "DB-PATH" default-db-path))
 
-(defn select-snippet [listSelectionEvent]
+
+;;; Snippets model stuff
+(defn load-data []
+  (let [snippets (:snippets application)]
+    (reset! snippets (load-snippets (get-db-path)))))
+
+(defn shutdown []
+  (save-snippets (get-db-path) @(:snippets application)))
+
+
+;;; GUI related stuff
+(defn display-msg
+  "Change status bar message"
+  [msg]
+  (reset! (:message application) msg))
+
+
+(defn select-snippet
+  "Action to be executed when a item is selected on the snippets list"
+  [listSelectionEvent]
   (let [model (.getSource listSelectionEvent)
         item (.getSelectedIndex model)
         snippets (:snippets application)
@@ -45,13 +61,23 @@
       (reset! editable true))))
 
 
-(defn insert-snippet [lang body header]
+(defn insert-snippet
+  [lang body header]
   (let [snippets (:snippets application)]
     (swap! snippets conj {:language lang :body body :header header})
     (display-msg "Snippet inserted.")))
 
 
-(defn make-new-snippet-dialog [frame]
+(defn save-snippet [text]
+  (let [snippets (:snippets application)
+        msg (:message application)
+        selected (:selected application)]
+    (swap! snippets assoc-in [@selected :body] text)
+    (reset! msg "Saved.")))
+
+
+(defn make-new-snippet-dialog
+  [frame]
   (let [dialog (JDialog. frame "Insert New Snippet" true)
         code-area (ui/syntax-area 60 20)
         lang (ui/combo (ui/get-supported-languages) (fn [jcombobox] (ui/set-syntax code-area (.getSelectedItem jcombobox))))
@@ -71,6 +97,7 @@
                               (RTextScrollPane. code-area)
                               (shelf save-btn cancel-btn)))
       (.setSize 640 480))))
+
 
 (defn make-new-options-dialog [frame]
   (let [dialog (JDialog. frame "Options" true)
@@ -100,18 +127,6 @@
                               (shelf save-btn cancel-btn)))
       (.setSize 640 480)
       (.pack))))
-
-
-(defn edit-snippet []
-  (reset! (:editable application) true))
-
-
-(defn save-snippet [text]
-  (let [snippets (:snippets application)
-        msg (:message application)
-        selected (:selected application)]
-    (swap! snippets assoc-in [@selected :body] text)
-    (reset! msg "Saved.")))
 
 
 (defn make-window []
@@ -184,13 +199,6 @@
       (.setLocationRelativeTo nil)
       (.setVisible true))))
 
-
-(defn load-data []
-  (let [snippets (:snippets application)]
-    (reset! snippets (load-snippets (get-db-path)))))
-
-(defn shutdown []
-  (save-snippets (get-db-path) @(:snippets application)))
 
 (defn -main
   [& args]
