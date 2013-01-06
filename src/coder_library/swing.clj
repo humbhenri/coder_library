@@ -76,15 +76,15 @@
 
 (defn syntax-area [rows cols]
   (doto (RSyntaxTextArea. rows cols)
-    (.setAntiAliasingEnabled true)
-    (.setSyntaxEditingStyle SyntaxConstants/SYNTAX_STYLE_JAVA)))
+    (.setAntiAliasingEnabled true)))
 
 (defn get-supported-languages []
   (for [field (.getDeclaredFields SyntaxConstants)]
-    (.get field nil)))
+    (-> (.get field nil)
+        (.replaceAll "text/" ""))))
 
 (defn set-syntax [^RSyntaxTextArea syntax-area syntax]
-  (.setSyntaxEditingStyle syntax-area syntax))
+  (.setSyntaxEditingStyle syntax-area (str "text/" syntax)))
 
 (defn menu-item [label action]
   (doto (JMenuItem. label)
