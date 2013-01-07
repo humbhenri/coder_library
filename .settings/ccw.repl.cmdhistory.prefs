@@ -1,0 +1,2 @@
+cmdhistory=["(+ 2 3)" "(make-window)" "(use 'coder-library.core)" "(make-window)" "(def c (ui/migpanel \\"fillx\\"))" "(use 'coder-library.swing \:as ui)" "(use ['coder-library.swing \:as ui])" "(use 'coder-library.swing)" "(def c (migpanel \\"fillx\\"))" "c" "(use 'coder-library.core)" "(make-window)"]
+eclipse.preferences.version=1

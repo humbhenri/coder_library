@@ -6,16 +6,16 @@
   (:import [javax.swing Box BoxLayout JTextField JPanel
             JSplitPane JLabel JButton
             JOptionPane JFrame SwingUtilities DefaultListModel
-            JMenuBar JMenuItem JMenu JDialog JToolBar JFileChooser]
+            JMenuBar JMenuItem JMenu JDialog JToolBar JFileChooser JScrollPane]
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener MouseAdapter]
            [org.fife.ui.rtextarea RTextScrollPane]))
 
-
 (def application {:snippets (atom [])
                   :selected (atom 0)
                   :editable (atom false)
-                  :message (atom "")})
+                  :message (atom "")
+                  :search-term (atom "")})
 
 ;;; User Preferences
 (def file-sep (System/getProperty "file.separator"))
@@ -32,7 +32,6 @@
 (defn get-db-path []
   (prefs/get-pref "DB-PATH" default-db-path))
 
-
 ;;; Snippets model stuff
 (defn load-data []
   (let [snippets (:snippets application)]
@@ -41,13 +40,17 @@
 (defn shutdown []
   (save-snippets (get-db-path) @(:snippets application)))
 
+(defn search-snippets
+  "Return all the snippets that contains the terms inside body ou header."
+  [terms]
+  (filter #(or (-> (:header %) (.contains terms))
+               (-> (:body %) (.contains terms))) @(:snippets application)))
 
 ;;; GUI related stuff
 (defn display-msg
   "Change status bar message"
   [msg]
-  (reset! (:message application) msg))
-
+  (reset! (:message application) msg))
 
 (defn select-snippet
   "Action to be executed when a item is selected on the snippets list"
@@ -59,23 +62,20 @@
     (when-not (.getValueIsAdjusting listSelectionEvent)
       (reset! (:selected application) item)
       (reset! editable true))))
-
-
+
 (defn insert-snippet
   [lang body header]
   (let [snippets (:snippets application)]
     (swap! snippets conj {:language lang :body body :header header})
     (display-msg "Snippet inserted.")))
-
-
+
 (defn save-snippet [text]
   (let [snippets (:snippets application)
         msg (:message application)
         selected (:selected application)]
     (swap! snippets assoc-in [@selected :body] text)
     (reset! msg "Saved.")))
-
-
+
 (defn make-new-snippet-dialog
   [frame]
   (let [dialog (JDialog. frame "Insert New Snippet" true)
@@ -85,17 +85,23 @@
         hide #(do (.setText code-area "")
                   (.setText header "")
                   (.hide dialog))
-        save-btn (ui/button "Save" #(do
+        save (ui/button "Save" #(do
                                    (insert-snippet (.getSelectedItem lang) (.getText code-area) (.getText header))
                                    (hide)))
-        cancel-btn (ui/button "Cancel" hide)]
+        cancel (ui/button "Cancel" hide)
+        component (ui/migpanel "fillx")]
+    (doto component
+      (.add (ui/label "Syntax") "split, left, width 100!")
+      (.add lang "growx, wrap")
+      (.add (ui/label "Description") "split, left, width 100!")
+      (.add header "growx, wrap")
+      (.add (RTextScrollPane. code-area) "span, grow, pushy")
+      (.add save "split, right, width 100!")
+      (.add cancel "width 100!"))
     (doto dialog
       (.setLocationRelativeTo nil)
       (.setVisible false)
-      (.setContentPane (stack (shelf (ui/label "Syntax") lang)
-                              (shelf (ui/label "Description") header)
-                              (RTextScrollPane. code-area)
-                              (shelf save-btn cancel-btn)))
+      (.setContentPane component)
       (.setSize 640 480))))
 
 
@@ -108,7 +114,7 @@
                        (.setAcceptAllFileFilterUsed false))
         save-btn (ui/button "Save" #(do
                                       (set-db-path (str (.getText db-path-input)))
-                                      ;; (display-msg (str "Library path changed: " (get-db-path)))
+                                      (display-msg (str "Library path changed: " (get-db-path)))
                                       (hide)))
         cancel-btn (ui/button "Cancel" hide)
         ask-db-path #(when (= (.showOpenDialog file-chooser dialog) JFileChooser/APPROVE_OPTION)
@@ -129,6 +135,41 @@
       (.pack))))
 
 
+(defn make-search-dialog [frame]
+  (let [dialog (JDialog. frame "Results..." false)
+        search (ui/txt 30 "Search terms")
+        model (DefaultListModel.)
+        result (ui/jlist model #(alert "blah"))
+        hide #(do (.setText search "")
+                  (.clear model)
+                  (.hide dialog))
+        ok (ui/button "OK" hide)
+        cancel (ui/button "Cancel" hide)
+        component (ui/migpanel "fillx")
+        update-result #(do (.clear model)
+                         (doseq [e (search-snippets %)]
+                             (.addElement model (:header e))))]
+    (add-watch (:search-term application) "" (fn [_ _ _ terms]
+                                               (SwingUtilities/invokeLater
+                                                #(do
+                                                   (.setText search terms)
+                                                   (.revalidate search)
+                                                   (update-result terms)
+                                                   (.revalidate result)))))
+    (.addActionListener search (proxy [ActionListener] []
+                                 (actionPerformed [e] (SwingUtilities/invokeLater
+                                                       (update-result (.getText search))))))
+    (doto component
+      (.add search "span, grow")
+      (.add (JScrollPane. result) "span, grow, pushy")
+      (.add ok "split, right, width 100!")
+      (.add cancel "width 100!"))
+    (doto dialog
+      (.setLocationRelativeTo nil)
+      (.setVisible false)
+      (.setContentPane component)
+      (.setSize 640 280))))
+
 (defn make-window []
   (let [frame (JFrame. "Coder Libray")
         snippets-list-model (DefaultListModel.)
@@ -141,7 +182,9 @@
         save-menu (ui/menu-item "Save" (fn [e] (save-snippet (.getText code-area))))
         content-pane (ui/migpanel "fillx")
         status (ui/label "")
-        options-dialog (make-new-options-dialog frame)]
+        options-dialog (make-new-options-dialog frame)
+        search-dialog (make-search-dialog frame)
+        search-input (ui/txt 30 "")]
     (add-watch (:snippets application) nil
                (fn [_ _ _ newsnippets]
                  (SwingUtilities/invokeLater
@@ -188,8 +231,13 @@
     (.add toolbar
           (doto save-btn (.setIcon (icon "save.gif" "Save"))
                 (.setEnabled false)))
+    (.addActionListener search-input (proxy [ActionListener] []
+                                       (actionPerformed [e]
+                                         (reset! (:search-term application) (.getText search-input))
+                                         (.setVisible search-dialog true))))
     (doto content-pane
-      (.add toolbar "span, grow")
+      (.add toolbar)
+      (.add search-input "growx, wrap")
       (.add (ui/splitter snippets-list (ui/stack (RTextScrollPane. code-area))) "span, grow")
       (.add status "span, grow"))
     (doto frame
