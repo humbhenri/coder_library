@@ -15,8 +15,7 @@
 (def application {:snippets (atom [])
                   :selected (atom 0)
                   :editable (atom false)
-                  :message (atom "")
-                  :search-term (atom "")})
+                  :message (atom "")})
 
 ;;; User Preferences
 (def file-sep (System/getProperty "file.separator"))
@@ -140,30 +139,30 @@
   (let [dialog (JDialog. frame "Search Dialog" false)
         search (ui/txt 30 "")
         model (DefaultListModel.)
-        result (ui/jlist model #(alert "blah"))
+        result-number (ui/label "")
+        get-index #(first (for [ [i snippet] (map-indexed vector @(:snippets application))
+                                 :when (= % (:header snippet)) ] i))
+        result (ui/jlist model (fn [e]
+                                 (let [index (get-index (.getSelectedValue (.getSource e)))]
+                                   (reset! (:selected application) index))))
         hide #(do (.setText search "")
                   (.clear model)
                   (.hide dialog))
-        ok (ui/button "OK" hide)
-        cancel (ui/button "Cancel" hide)
-        component (ui/migpanel "fillx")
         update-result #(do (.clear model)
                          (doseq [e (search-snippets %)]
-                             (.addElement model (:header e))))]
-    (add-watch (:search-term application) "" (fn [_ _ _ terms]
-                                               (SwingUtilities/invokeLater
-                                                #(do
-                                                   (.setText search terms)
-                                                   (.revalidate search)
-                                                   (update-result terms)
-                                                   (.revalidate result)))))
+                             (.addElement model (:header e)))
+                         (.setText result-number (str (.getSize model) " results")))
+        ok (ui/button "OK" #(update-result (.getText search)))
+        cancel (ui/button "Cancel" hide)
+        component (ui/migpanel "fillx")]
     (.addActionListener search (proxy [ActionListener] []
-                                 (actionPerformed [e] (SwingUtilities/invokeLater
+                                 (actionPerformed [_] (SwingUtilities/invokeLater
                                                        (update-result (.getText search))))))
     (doto component
-      (.add (ui/label "Search"))
-      (.add search "span, grow")
+      (.add (ui/label "Search") "growx, left")
+      (.add search "growx, wrap")
       (.add (JScrollPane. result) "span, grow, pushy")
+      (.add result-number "growx, left")
       (.add ok "split, right, width 100!")
       (.add cancel "width 100!"))
     (doto dialog
@@ -171,6 +170,7 @@
       (.setVisible false)
       (.setContentPane component)
       (.setSize 640 280))))
+
 
 (defn make-window []
   (let [frame (JFrame. "Coder Libray")
@@ -200,10 +200,12 @@
                  (SwingUtilities/invokeLater
                   (fn []
                     (let [snippet (nth @(:snippets application) index)
-                          window-title (:header snippet)]
+                          window-title (or (:header snippet) "")]
                       (.setText code-area (:body snippet))
                       (ui/set-syntax code-area (:language snippet))
-                      (.setTitle frame (str "Coder Library - " window-title)))
+                      (.setTitle frame (str "Coder Library - " window-title))
+                      (.setSelectedIndex snippets-list index)
+                      (.ensureIndexIsVisible snippets-list index))
                     (.revalidate frame)))))
     (add-watch (:editable application) nil
                (fn [_ _ _ editable]
@@ -214,8 +216,7 @@
                     (.setEnabled save-menu editable)))))
     (add-watch (:message application) nil
                (fn [_ _ _ newmsg]
-                 (SwingUtilities/invokeLater
-                  (fn [] (.setText status newmsg)))))
+                 (SwingUtilities/invokeLater #(.setText status newmsg))))
     (.add menubar
           (doto (JMenu. "File")
             (.add (ui/menu-item "New" #(.setVisible new-snippet-dialog true)))
@@ -239,7 +240,7 @@
                 (.setEnabled false)))
     (doto content-pane
       (.add toolbar "span, grow, wrap")
-      (.add (ui/splitter snippets-list (ui/stack (RTextScrollPane. code-area))) "span, grow")
+      (.add (ui/splitter (JScrollPane. snippets-list) (ui/stack (RTextScrollPane. code-area))) "span, grow")
       (.add status "span, grow"))
     (doto frame
       (.setJMenuBar menubar)

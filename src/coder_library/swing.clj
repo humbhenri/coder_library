@@ -78,7 +78,7 @@
     (.addListSelectionListener jlist (proxy [ListSelectionListener] []
                                     (valueChanged [e]
                                       (selection-cb e))))
-    (JScrollPane. jlist)))
+    jlist))
 
 
 (defn syntax-area [rows cols]
