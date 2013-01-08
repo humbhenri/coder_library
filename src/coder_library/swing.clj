@@ -96,11 +96,18 @@
   (.setSyntaxEditingStyle syntax-area (str "text/" syntax)))
 
 
-(defn menu-item [label action]
-  (doto (JMenuItem. label)
-    (.addActionListener (proxy [ActionListener] []
-                          (actionPerformed [_]
-                            (action))))))
+(defn menu-item
+  ([label action]
+     (doto (JMenuItem. label)
+       (.addActionListener (proxy [ActionListener] []
+                             (actionPerformed [_]
+                               (action))))))
+  ([label action keystroke]
+     (doto (JMenuItem. label)
+       (.addActionListener (proxy [ActionListener] []
+                             (actionPerformed [_]
+                               (action))))
+       (.setAccelerator keystroke))))
 
 
 (defn icon [path alt-text]

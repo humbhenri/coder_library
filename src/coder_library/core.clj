@@ -6,9 +6,10 @@
   (:import [javax.swing Box BoxLayout JTextField JPanel
             JSplitPane JLabel JButton
             JOptionPane JFrame SwingUtilities DefaultListModel
-            JMenuBar JMenuItem JMenu JDialog JToolBar JFileChooser JScrollPane]
+            JMenuBar JMenuItem JMenu JDialog JToolBar JFileChooser JScrollPane
+            KeyStroke]
            [java.awt BorderLayout Component GridLayout FlowLayout]
-           [java.awt.event ActionListener MouseAdapter]
+           [java.awt.event ActionListener MouseAdapter KeyEvent InputEvent]
            [org.fife.ui.rtextarea RTextScrollPane]))
 
 (def application {:snippets (atom [])
@@ -136,8 +137,8 @@
 
 
 (defn make-search-dialog [frame]
-  (let [dialog (JDialog. frame "Results..." false)
-        search (ui/txt 30 "Search terms")
+  (let [dialog (JDialog. frame "Search Dialog" false)
+        search (ui/txt 30 "")
         model (DefaultListModel.)
         result (ui/jlist model #(alert "blah"))
         hide #(do (.setText search "")
@@ -160,6 +161,7 @@
                                  (actionPerformed [e] (SwingUtilities/invokeLater
                                                        (update-result (.getText search))))))
     (doto component
+      (.add (ui/label "Search"))
       (.add search "span, grow")
       (.add (JScrollPane. result) "span, grow, pushy")
       (.add ok "split, right, width 100!")
@@ -183,8 +185,7 @@
         content-pane (ui/migpanel "fillx")
         status (ui/label "")
         options-dialog (make-new-options-dialog frame)
-        search-dialog (make-search-dialog frame)
-        search-input (ui/txt 30 "")]
+        search-dialog (make-search-dialog frame)]
     (add-watch (:snippets application) nil
                (fn [_ _ _ newsnippets]
                  (SwingUtilities/invokeLater
@@ -220,6 +221,11 @@
             (.add (ui/menu-item "New" #(.setVisible new-snippet-dialog true)))
             (.add save-menu)))
     (.add menubar
+          (doto (JMenu. "Edit")
+            (.add (ui/menu-item "Search"
+                                #(.setVisible search-dialog true)
+                                (KeyStroke/getKeyStroke KeyEvent/VK_L InputEvent/CTRL_MASK)))))
+    (.add menubar
           (doto (JMenu. "Tools")
             (.add (ui/menu-item "Options" #(.setVisible options-dialog true)))))
     (.setFloatable toolbar false)
@@ -231,13 +237,8 @@
     (.add toolbar
           (doto save-btn (.setIcon (icon "save.gif" "Save"))
                 (.setEnabled false)))
-    (.addActionListener search-input (proxy [ActionListener] []
-                                       (actionPerformed [e]
-                                         (reset! (:search-term application) (.getText search-input))
-                                         (.setVisible search-dialog true))))
     (doto content-pane
-      (.add toolbar)
-      (.add search-input "growx, wrap")
+      (.add toolbar "span, grow, wrap")
       (.add (ui/splitter snippets-list (ui/stack (RTextScrollPane. code-area))) "span, grow")
       (.add status "span, grow"))
     (doto frame
