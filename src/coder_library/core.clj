@@ -2,7 +2,8 @@
   (:gen-class)
   (:use [coder-library.swing :as ui]
         [coder-library.snippets :only [load-snippets new-snippet save-snippets]]
-        [coder-library.prefs :as prefs])
+        [coder-library.prefs :as prefs]
+        [clojure.java.io :only [resource]])
   (:import [javax.swing Box BoxLayout JTextField JPanel
             JSplitPane JLabel JButton
             JOptionPane JFrame SwingUtilities DefaultListModel
@@ -185,7 +186,8 @@
         content-pane (ui/migpanel "fillx")
         status (ui/label "")
         options-dialog (make-new-options-dialog frame)
-        search-dialog (make-search-dialog frame)]
+        search-dialog (make-search-dialog frame)
+        app-icon (.getImage (java.awt.Toolkit/getDefaultToolkit) (resource "icon.png"))]
     (add-watch (:snippets application) nil
                (fn [_ _ _ newsnippets]
                  (SwingUtilities/invokeLater
@@ -243,6 +245,7 @@
       (.add (ui/splitter (JScrollPane. snippets-list) (ui/stack (RTextScrollPane. code-area))) "span, grow")
       (.add status "span, grow"))
     (doto frame
+      (.setIconImage app-icon)
       (.setJMenuBar menubar)
       (.setContentPane content-pane)
       (.setSize 800 600)
