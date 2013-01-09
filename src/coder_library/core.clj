@@ -69,14 +69,16 @@
   (let [snippets (:snippets application)]
     (swap! snippets conj {:language lang :body body :header header})
     (display-msg "Snippet inserted.")))
-
+
+
 (defn save-snippet [text]
   (let [snippets (:snippets application)
         msg (:message application)
         selected (:selected application)]
     (swap! snippets assoc-in [@selected :body] text)
     (reset! msg "Saved.")))
-
+
+
 (defn make-new-snippet-dialog
   [frame]
   (let [dialog (JDialog. frame "Insert New Snippet" true)
@@ -182,12 +184,17 @@
         menubar (JMenuBar.)
         toolbar (JToolBar.)
         save-btn (ui/button "Save" (fn [] (save-snippet (.getText code-area))))
-        save-menu (ui/menu-item "Save" (fn [e] (save-snippet (.getText code-area))))
+        save-menu (ui/menu-item "Save" (fn [e] (save-snippet (.getText code-area))
+                                         (KeyStroke/getKeyStroke KeyEvent/VK_S InputEvent/CTRL_MASK)))
         content-pane (ui/migpanel "fillx")
         status (ui/label "")
         options-dialog (make-new-options-dialog frame)
         search-dialog (make-search-dialog frame)
-        app-icon (.getImage (java.awt.Toolkit/getDefaultToolkit) (resource "icon.png"))]
+        app-icon (.getImage (java.awt.Toolkit/getDefaultToolkit) (resource "icon.png"))
+        syntax-combo (ui/combo (ui/get-supported-languages)
+                               (fn [jcombobox] (ui/set-syntax code-area
+                                                             (.getSelectedItem jcombobox))))
+        snippet-name (ui/txt 30 "")]
     (add-watch (:snippets application) nil
                (fn [_ _ _ newsnippets]
                  (SwingUtilities/invokeLater
@@ -203,12 +210,15 @@
                   (fn []
                     (when (>= index 0)
                       (let [snippet (nth @(:snippets application) index)
-                            window-title (or (:header snippet) "")]
+                            title (or (:header snippet) "")
+                            syntax (.indexOf (ui/get-supported-languages) (:language snippet))]
                         (.setText code-area (:body snippet))
                         (ui/set-syntax code-area (:language snippet))
-                        (.setTitle frame (str "Coder Library - " window-title))
+                        (.setTitle frame (str "Coder Library - " title))
                         (.setSelectedIndex snippets-list index)
-                        (.ensureIndexIsVisible snippets-list index)))
+                        (.ensureIndexIsVisible snippets-list index)
+                        (.setSelectedIndex syntax-combo (if (> syntax 0) syntax 0))
+                        (.setText snippet-name title)))
                     (.revalidate frame)))))
     (add-watch (:editable application) nil
                (fn [_ _ _ editable]
@@ -222,7 +232,7 @@
                  (SwingUtilities/invokeLater #(.setText status newmsg))))
     (.add menubar
           (doto (JMenu. "File")
-            (.add (ui/menu-item "New" #(.setVisible new-snippet-dialog true)))
+            (.add (ui/menu-item "New" #(.setVisible new-snippet-dialog true) (KeyStroke/getKeyStroke KeyEvent/VK_N InputEvent/CTRL_MASK)))
             (.add save-menu)))
     (.add menubar
           (doto (JMenu. "Edit")
@@ -234,16 +244,18 @@
             (.add (ui/menu-item "Options" #(.setVisible options-dialog true)))))
     (.setFloatable toolbar false)
     (.add toolbar
-          (doto (ui/button "New" (fn [] (doto new-snippet-dialog
-                                          (.setLocationRelativeTo nil)
-                                          (.setVisible true))))
+          (doto (ui/button "New" #(doto new-snippet-dialog
+                                    (.setLocationRelativeTo nil)
+                                    (.setVisible true)))
             (.setIcon (icon "new.gif" "New"))))
     (.add toolbar
-          (doto save-btn (.setIcon (icon "save.gif" "Save"))
-                (.setEnabled false)))
+          (doto save-btn (.setIcon (icon "save.gif" "Save"))))
     (doto content-pane
       (.add toolbar "span, grow, wrap")
-      (.add (ui/splitter (JScrollPane. snippets-list) (ui/stack (RTextScrollPane. code-area))) "span, grow")
+      (.add (ui/splitter
+             (JScrollPane. snippets-list)
+             (ui/stack (RTextScrollPane. code-area)
+                       (shelf snippet-name syntax-combo))) "span, grow")
       (.add status "span, grow"))
     (doto frame
       (.setIconImage app-icon)
