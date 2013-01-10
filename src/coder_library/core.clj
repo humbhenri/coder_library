@@ -201,13 +201,14 @@
                (fn [_ _ _ index]
                  (SwingUtilities/invokeLater
                   (fn []
-                    (let [snippet (nth @(:snippets application) index)
-                          window-title (or (:header snippet) "")]
-                      (.setText code-area (:body snippet))
-                      (ui/set-syntax code-area (:language snippet))
-                      (.setTitle frame (str "Coder Library - " window-title))
-                      (.setSelectedIndex snippets-list index)
-                      (.ensureIndexIsVisible snippets-list index))
+                    (when (>= index 0)
+                      (let [snippet (nth @(:snippets application) index)
+                            window-title (or (:header snippet) "")]
+                        (.setText code-area (:body snippet))
+                        (ui/set-syntax code-area (:language snippet))
+                        (.setTitle frame (str "Coder Library - " window-title))
+                        (.setSelectedIndex snippets-list index)
+                        (.ensureIndexIsVisible snippets-list index)))
                     (.revalidate frame)))))
     (add-watch (:editable application) nil
                (fn [_ _ _ editable]
