@@ -1,6 +1,10 @@
 (ns coder-library.snippets
   (:import [java.util Date])
-  (:require [clojure.java.io :as io]))
+  (:use [clojure.java.io :as io]))
+
+
+(def snippets [])
+
 
 (defn new-snippet [& args]
   (let [[lang body header] args]
@@ -9,11 +13,27 @@
      :header header
      :modification (Date.)}))
 
-(defn load-snippets [db-path]
+
+(defn get-all-snippets [db-path]
   (try
-    (load-file db-path)
+    (def snippets (load-file db-path))
+    snippets
     (catch java.io.FileNotFoundException e
-      (vector))))
+      (def snippets (vector))
+      snippets)))
+
+
+(defn search-by [key val]
+  (for [snippet snippets :when (= (key snippet) val)] snippet))
+
 
 (defn save-snippets [db-path snippets-list]
   (spit db-path snippets-list))
+
+
+(defn search [term]
+  (let [terms (into [] (.split term "\\s+"))]
+    (distinct (for [s snippets t terms
+                    :when (or (.contains (:header s) t)
+                              (.contains (:body s) t))]
+                s))))

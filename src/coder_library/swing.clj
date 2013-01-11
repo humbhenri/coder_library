@@ -7,6 +7,7 @@
            [java.awt BorderLayout Component GridLayout FlowLayout]
            [java.awt.event ActionListener]
            [org.fife.ui.rsyntaxtextarea RSyntaxTextArea SyntaxConstants]
+           [org.fife.ui.rtextarea RTextScrollPane]
            [net.miginfocom.swing MigLayout])
   (:use [clojure.java.io :only [resource]]))
 
@@ -26,18 +27,28 @@
     stack))
 
 
-(defn splitter [top bottom]
+(defn splitter [left right]
   (doto (JSplitPane.)
     (.setOrientation JSplitPane/HORIZONTAL_SPLIT)
-    (.setLeftComponent top)
-    (.setRightComponent bottom)))
+    (.setLeftComponent left)
+    (.setRightComponent right)))
 
 
-(defn button [text f]
-  (doto (JButton. text)
-    (.addActionListener
-     (proxy [ActionListener] []
-       (actionPerformed [_] (f))))))
+(defn vertical-splitter [top bottom]
+  (doto (JSplitPane.)
+    (.setOrientation JSplitPane/VERTICAL_SPLIT)
+    (.setTopComponent top)
+    (.setBottomComponent bottom)))
+
+
+(defn button
+  ([text f]
+     (doto (JButton. text)
+       (.addActionListener
+        (proxy [ActionListener] []
+          (actionPerformed [_] (f))))))
+  ([icon]
+     (JButton. icon)))
 
 
 (defn txt [cols t]
@@ -69,16 +80,31 @@
     (JPanel. (MigLayout. layout col row))))
 
 
-(defn jlist [model selection-cb]
-  (let [jlist (JList. model)]
-    (doto jlist
-      (.setSelectionMode ListSelectionModel/SINGLE_SELECTION)
-      (.setLayoutOrientation JList/VERTICAL)
-      (.setVisibleRowCount -1))
-    (.addListSelectionListener jlist (proxy [ListSelectionListener] []
-                                    (valueChanged [e]
-                                      (selection-cb e))))
-    jlist))
+(defn jlist
+  ([model selection-cb]
+      (let [jlist (JList. model)]
+        (doto jlist
+          (.setSelectionMode ListSelectionModel/SINGLE_SELECTION)
+          (.setLayoutOrientation JList/VERTICAL)
+          (.setVisibleRowCount -1))
+        (.addListSelectionListener jlist (proxy [ListSelectionListener] []
+                                           (valueChanged [e]
+                                             (selection-cb e))))
+        jlist))
+  ([model]
+     (let [jlist (JList. model)]
+        (doto jlist
+          (.setSelectionMode ListSelectionModel/SINGLE_SELECTION)
+          (.setLayoutOrientation JList/VERTICAL)
+          (.setVisibleRowCount -1))
+        jlist)))
+
+
+(defmacro selection-listener [^javax.swing.JList a-list & body]
+  `(.addListSelectionListener ~a-list (proxy [ListSelectionListener] []
+                                        (valueChanged [~'_] (SwingUtilities/invokeLater
+                                                             (fn []
+                                                               ~@body))))))
 
 
 (defn syntax-area [rows cols]
@@ -95,6 +121,8 @@
 (defn set-syntax [^RSyntaxTextArea syntax-area syntax]
   (.setSyntaxEditingStyle syntax-area (str "text/" syntax)))
 
+
+(defn rscrollpane [c] (RTextScrollPane. c))
 
 (defn menu-item
   ([label action]
@@ -118,3 +146,25 @@
   (doto (JComboBox. (.toArray items))
     (.addActionListener (proxy [ActionListener] []
                           (actionPerformed [e] (selection-cb (.getSource e)))))))
+
+
+(defn scrollpane [c]
+  (JScrollPane. c))
+
+
+(defmacro do-swing
+  "Execute code in the Swing thread"
+  [& more]
+  `(SwingUtilities/invokeLater
+    (fn []
+      ~@more)))
+
+
+(defmacro action-listener [component & body]
+  `(.addActionListener ~component (proxy [ActionListener] []
+                                    (actionPerformed [~'_]
+                                      (SwingUtilities/invokeLater
+                                       (fn []
+                                         ~@body))))))
+
+
