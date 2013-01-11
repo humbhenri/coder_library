@@ -4,7 +4,7 @@
         [coder-library.snippets :as model]
         [coder-library.prefs :as prefs]
         [clojure.java.io :only [resource]])
-  (:import [javax.swing JFrame DefaultListModel]))
+  (:import [javax.swing JFrame DefaultListModel UIManager]))
 
 ;;; App logic
 (def ^:dynamic *snippets-list* (atom []))
@@ -73,6 +73,14 @@
                                            (.setSelectedItem languages (:language snippet))))
     (doseq [c [search search-widget]]
       (ui/action-listener c (search-snippets (.getText search-widget))))
+    (ui/action-listener new (do
+                              (search-snippets "") ;clear
+                              (doseq [listener (.getActionListeners save)]
+                                (.removeActionListener save listener))
+                              (ui/action-listener save (model/new-snippet (.getSelectedItem languages)
+                                                                          (.getText syntax-area)
+                                                                          (.getText description)))
+                              (load-all-snippets)))
     (doto (ui/migpanel "fillx")
       (.add search "split, width 30")
       (.add search-widget "span, growx, wrap")
@@ -89,6 +97,7 @@
 (defn make-window []
   (let [frame (JFrame. "Coder Libray")
         app-icon (.getImage (java.awt.Toolkit/getDefaultToolkit) (resource "icon.png"))]
+    (UIManager/setLookAndFeel (UIManager/getSystemLookAndFeelClassName)) 
     (doto frame
       (.setIconImage app-icon)
       (.setContentPane (window-content))

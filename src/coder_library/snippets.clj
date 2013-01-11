@@ -8,10 +8,10 @@
 
 (defn new-snippet [& args]
   (let [[lang body header] args]
-    {:language lang
-     :body body
-     :header header
-     :modification (Date.)}))
+    (def snippets (conj snippets {:language lang
+                                  :body body
+                                  :header header
+                                  :modification (Date.)}))))
 
 
 (defn get-all-snippets [db-path]
