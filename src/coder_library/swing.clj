@@ -145,7 +145,7 @@
 (defn combo [items selection-cb]
   (doto (JComboBox. (.toArray items))
     (.addActionListener (proxy [ActionListener] []
-                          (actionPerformed [e] (selection-cb (.getSource e)))))))
+                          (actionPerformed [_] (selection-cb))))))
 
 
 (defn scrollpane [c]
@@ -166,5 +166,3 @@
                                       (SwingUtilities/invokeLater
                                        (fn []
                                          ~@body))))))
-
-
