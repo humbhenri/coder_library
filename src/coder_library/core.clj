@@ -116,4 +116,5 @@
 (defn -main [& args]
   (.setDefaultCloseOperation (make-window) JFrame/EXIT_ON_CLOSE)
   (load-all-snippets)
+  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. #(model/save-snippets (get-db-path)))))
   nil)

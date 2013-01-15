@@ -27,8 +27,8 @@
   (for [snippet snippets :when (= (key snippet) val)] snippet))
 
 
-(defn save-snippets [db-path snippets-list]
-  (spit db-path snippets-list))
+(defn save-snippets [db-path]
+  (spit db-path snippets))
 
 
 (defn search [term]
