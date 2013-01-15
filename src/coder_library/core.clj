@@ -66,7 +66,7 @@
         snippets-list (build-snippets-list)
         split         (ui/vertical-splitter (ui/scrollpane snippets-list)
                                             (ui/rscrollpane syntax-area))]
-    (.setDividerLocation split 100)
+    (.setDividerLocation split 200)
     (.setEnabled save false)
     (.setEnabled delete false)
     (ui/selection-listener snippets-list (let [descr (.getSelectedValue snippets-list)
@@ -108,7 +108,7 @@
     (doto frame
       (.setIconImage app-icon)
       (.setContentPane (window-content))
-      (.setSize 800 600)
+      (.setSize 480 640)
       (.setLocationRelativeTo nil)
       (.setVisible true))))
 
